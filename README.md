@@ -11,6 +11,11 @@ cenários, banners, peças promocionais em vários formatos e descrições de ve
 - Envio por clique, arrastar e soltar ou colar (Ctrl+V); três produtos de exemplo
 - Remoção de fundo em dois modos: **rápido** (algoritmo próprio, instantâneo, remove até o fundo dentro de alças)
   e **precisão (IA)** — rede neural rodando no navegador (`@imgly/background-removal`, ~80 MB baixados só na 1ª vez; é o modo padrão para fotos enviadas)
+- Refino do recorte: remover partes finas (cabos, fios), bordas suaves/nítidas, girar o produto e
+  pincel para apagar/restaurar à mão (com desfazer)
+- Melhorar imagem: automático (níveis do próprio produto) + brilho, contraste, saturação, temperatura e nitidez
+- 5 composições (padrão, flutuando, inclinado, dupla, trio) e **variações** prontas da mesma foto
+- 5 animações (flutuar, zoom, brilho, balanço, entrada) com prévia ao vivo e **download em vídeo** (MP4; WebM onde não há MP4)
 - 8 cenários gerados na hora (estúdio, pódio, mármore, madeira, pôr do sol, natureza, neon, fundo branco),
   com sombra de contato e reflexo
 - 5 peças (só a foto, lançamento, promoção com selo de desconto, frete grátis, minimalista) com a cor da marca

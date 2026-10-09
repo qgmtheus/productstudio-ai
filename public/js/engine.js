@@ -76,14 +76,17 @@ export function trim(src, pad = 6) {
 
 /* ---------- remoção de fundo ---------- */
 
+export const SEG_MAX = 1200;
+
 /**
  * Modo rápido: estima a cor do fundo pelas bordas e "inunda" a partir delas,
- * aceitando degradês suaves. Ótimo para fotos em fundo liso (o caso mais comum).
+ * aceitando degradês suaves. Ótimo para fotos em fundo liso.
+ * Devolve { src, alpha } — a foto e a máscara, do mesmo tamanho, para o refino trabalhar.
  */
-export function removeBackgroundFast(img, { tolerance = 34 } = {}) {
-  const c = toCanvas(img, 1200);
+export function segmentFast(img, { tolerance = 34 } = {}) {
+  const c = toCanvas(img, SEG_MAX);
   const { width: w, height: h } = c;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', { willReadFrequently: true });
   const id = ctx.getImageData(0, 0, w, h);
   const d = id.data;
 
@@ -131,6 +134,8 @@ export function removeBackgroundFast(img, { tolerance = 34 } = {}) {
   }
 
   // bordas suaves: média 3x3 da máscara vira o alfa
+  const alpha = new Uint8ClampedArray(w * h);
+  let removed = 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     let s = 0, n = 0;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
@@ -138,14 +143,22 @@ export function removeBackgroundFast(img, { tolerance = 34 } = {}) {
       if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
       s += mask[yy * w + xx]; n++;
     }
-    d[(y * w + x) * 4 + 3] = Math.round(255 * (1 - s / n));
+    alpha[y * w + x] = Math.round(255 * (1 - s / n));
+    removed += mask[y * w + x];
   }
-  ctx.putImageData(id, 0, 0);
-  let removed = 0;
-  for (let p = 0; p < w * h; p++) removed += mask[p];
-  const out = trim(c);
-  out.lowConfidence = removed < w * h * 0.12; // quase nada saiu: o fundo não é liso
-  return out;
+  return { src: c, alpha, lowConfidence: removed < w * h * 0.12 }; // quase nada saiu: o fundo não é liso
+}
+
+/** Atalho usado na landing: recorte rápido já aplicado e cortado. */
+export function removeBackgroundFast(img, opts) {
+  const { src, alpha } = segmentFast(img, opts);
+  const ctx = src.getContext('2d', { willReadFrequently: true });
+  const out = document.createElement('canvas');
+  out.width = src.width; out.height = src.height;
+  const id = ctx.getImageData(0, 0, src.width, src.height);
+  for (let p = 0, i = 3; p < alpha.length; p++, i += 4) id.data[i] = alpha[p];
+  out.getContext('2d').putImageData(id, 0, 0);
+  return trim(out);
 }
 
 let aiModule = null;
@@ -153,43 +166,23 @@ let aiModule = null;
  * Modo precisão: rede neural rodando no próprio navegador (@imgly/background-removal).
  * Baixa o modelo na primeira vez (~80 MB) e depois fica em cache.
  */
-export async function removeBackgroundAI(file, onProgress) {
+export async function segmentAI(blob, img, onProgress) {
   if (!aiModule) aiModule = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
-  const blob = await aiModule.removeBackground(file, {
+  const out = await aiModule.removeBackground(blob, {
     model: 'isnet_fp16',
     output: { format: 'image/png' },
     // a biblioteca valida que o callback não retorna nada — por isso o corpo em bloco
     progress: (key, cur, total) => { onProgress?.(key.startsWith('fetch') ? 'fetch' : 'compute', total ? cur / total : 0); },
   });
-  const img = await loadImage(URL.createObjectURL(blob));
-  return trim(dropIslands(toCanvas(img, 1400)));
-}
-
-/** Apaga manchas soltas (pedaços de fundo que sobraram longe do produto). */
-function dropIslands(c) {
-  const { width: w, height: h } = c, ctx = c.getContext('2d');
-  const id = ctx.getImageData(0, 0, w, h), d = id.data;
-  const label = new Int32Array(w * h), sizes = [0];
-  for (let p0 = 0; p0 < w * h; p0++) {
-    if (label[p0] || d[p0 * 4 + 3] < 128) continue;
-    const n = sizes.length, stack = [p0];
-    label[p0] = n; let size = 0;
-    while (stack.length) {
-      const p = stack.pop(), x = p % w; size++;
-      for (const q of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p - w, p + w]) {
-        if (q < 0 || q >= w * h || label[q] || d[q * 4 + 3] < 128) continue;
-        label[q] = n; stack.push(q);
-      }
-    }
-    sizes.push(size);
-  }
-  const keep = Math.max(...sizes) * 0.04;
-  for (let p = 0; p < w * h; p++) {
-    const l = label[p];
-    if (l ? sizes[l] < keep : d[p * 4 + 3] < 40) d[p * 4 + 3] = 0;
-  }
-  ctx.putImageData(id, 0, 0);
-  return c;
+  const src = toCanvas(img, SEG_MAX);
+  const m = document.createElement('canvas');
+  m.width = src.width; m.height = src.height;
+  const mctx = m.getContext('2d', { willReadFrequently: true });
+  mctx.drawImage(await loadImage(URL.createObjectURL(out)), 0, 0, m.width, m.height);
+  const d = mctx.getImageData(0, 0, m.width, m.height).data;
+  const alpha = new Uint8ClampedArray(m.width * m.height);
+  for (let p = 0, i = 3; p < alpha.length; p++, i += 4) alpha[p] = d[i];
+  return { src, alpha };
 }
 
 /* ---------- cenários ---------- */
@@ -348,38 +341,149 @@ function drawScene(ctx, W, H, scene, accent, box) {
 
 /* ---------- produto ---------- */
 
-function drawProduct(ctx, cut, box, scene) {
-  const { x, y, w, h } = box;
-  const dark = scene === 'neon';
-  // sombra de contato
-  const g = ctx.createRadialGradient(x + w / 2, y + h, 0, x + w / 2, y + h, w * 0.55);
-  g.addColorStop(0, dark ? 'rgba(0,0,0,.6)' : 'rgba(0,0,0,.28)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.save();
-  ctx.translate(x + w / 2, y + h); ctx.scale(1, 0.12); ctx.translate(-(x + w / 2), -(y + h));
-  ctx.fillStyle = g; ctx.fillRect(x - w * 0.2, y + h - w * 0.6, w * 1.4, w * 1.2);
-  ctx.restore();
+export const POSES = [
+  { id: 'padrao',    label: 'Padrão' },
+  { id: 'flutuando', label: 'Flutuando' },
+  { id: 'inclinado', label: 'Inclinado' },
+  { id: 'duo',       label: 'Dupla' },
+  { id: 'trio',      label: 'Trio' },
+];
 
-  // reflexo no chão (cenários lisos)
-  if (['neon', 'estudio', 'por-do-sol'].includes(scene)) {
-    ctx.save();
-    ctx.globalAlpha = dark ? 0.22 : 0.12;
-    ctx.translate(0, (y + h) * 2); ctx.scale(1, -1);
-    ctx.drawImage(cut, x, y, w, h);
+export const ANIMS = [
+  { id: 'none',    label: 'Parada' },
+  { id: 'flutuar', label: 'Flutuar' },
+  { id: 'zoom',    label: 'Zoom suave' },
+  { id: 'brilho',  label: 'Brilho' },
+  { id: 'balanco', label: 'Balanço' },
+  { id: 'entrada', label: 'Entrada' },
+];
+
+const TAU = Math.PI * 2;
+const easeOut = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+
+// onde o produto "toca o chão": largura das linhas de baixo da silhueta (frações de 0 a 1)
+const footCache = new WeakMap();
+function footprint(cut) {
+  let f = footCache.get(cut);
+  if (f) return f;
+  const { width: w, height: h } = cut;
+  const d = cut.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  let bottom = -1;
+  for (let y = h - 1; y >= 0 && bottom < 0; y--) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 128) { bottom = y; break; }
+  let x0 = w, x1 = -1;
+  for (let y = Math.max(0, bottom - Math.round(h * 0.05)); y <= bottom; y++) for (let x = 0; x < w; x++) {
+    if (d[(y * w + x) * 4 + 3] > 128) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
+  }
+  if (x1 < 0) { x0 = 0; x1 = w; }
+  f = { x0: x0 / w, x1: x1 / w, flat: (x1 - x0) / w > 0.4 };
+  footCache.set(cut, f);
+  return f;
+}
+
+let scratch = null; // canvas reaproveitado para reflexo e brilho
+function scratchCanvas(w, h) {
+  if (!scratch) scratch = document.createElement('canvas');
+  if (scratch.width < w || scratch.height < h) { scratch.width = Math.max(scratch.width, w); scratch.height = Math.max(scratch.height, h); }
+  const x = scratch.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1;
+  x.clearRect(0, 0, w, h);
+  return x;
+}
+
+function contactShadow(ctx, cut, b, floorY, lift, dark) {
+  const f = footprint(cut);
+  const k = 1 / (1 + lift / Math.max(1, b.h) * 6); // quanto mais alto, mais fraca e difusa
+  const cx = b.x + b.w * (f.x0 + f.x1) / 2;
+  const fw = Math.max(b.w * (f.x1 - f.x0), b.w * 0.18);
+  const ell = (rx, ry, a) => {
+    const g = ctx.createRadialGradient(cx, floorY, 0, cx, floorY, rx);
+    g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.save(); ctx.translate(cx, floorY); ctx.scale(1, ry / rx); ctx.translate(-cx, -floorY);
+    ctx.fillStyle = g; ctx.fillRect(cx - rx, floorY - rx, rx * 2, rx * 2);
     ctx.restore();
-    // desvanece o reflexo
-    const fade = ctx.createLinearGradient(0, y + h, 0, y + h + h * 0.45);
-    fade.addColorStop(0, 'rgba(0,0,0,0)');
-    ctx.save(); ctx.globalCompositeOperation = 'destination-out';
-    fade.addColorStop(1, 'rgba(0,0,0,1)');
-    ctx.fillStyle = fade; ctx.fillRect(x - 4, y + h, w + 8, h);
-    ctx.restore();
+  };
+  ell(b.w * 0.5 / Math.sqrt(k), b.w * 0.05, (dark ? 0.35 : 0.14) * k);  // sombra ambiente, larga
+  ell(fw * 0.62 / k, fw * 0.07, (dark ? 0.6 : 0.34) * k * k);              // sombra de contato, sob a base
+}
+
+function reflection(ctx, cut, b, floorY, dark) {
+  const h = Math.round(b.h * 0.4), w = Math.round(b.w);
+  if (w < 2 || h < 2) return;
+  const x = scratchCanvas(w, h);
+  x.save(); x.translate(0, b.h); x.scale(1, -1); x.drawImage(cut, 0, 0, w, b.h); x.restore();
+  x.globalCompositeOperation = 'destination-in'; // desvanece só o reflexo, nunca o cenário
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  ctx.save(); ctx.globalAlpha = dark ? 0.25 : 0.14;
+  ctx.drawImage(scratch, 0, 0, w, h, b.x, floorY, w, h);
+  ctx.restore();
+}
+
+function shine(ctx, cut, b, t) {
+  const w = Math.round(b.w), h = Math.round(b.h);
+  if (w < 2 || h < 2) return;
+  const x = scratchCanvas(w, h);
+  x.drawImage(cut, 0, 0, w, h);
+  x.globalCompositeOperation = 'source-atop';
+  const p = -0.4 + t * 1.8; // posição da faixa de luz, atravessa o produto
+  const g = x.createLinearGradient(w * (p - 0.25), 0, w * (p + 0.25) + h * 0.3, h * 0.3);
+  g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.6;
+  ctx.drawImage(scratch, 0, 0, w, h, b.x, b.y, w, h);
+  ctx.restore();
+}
+
+/** Desenha uma cópia do produto com sombra projetada, já transformada (giro/elevação). */
+function placeCopy(ctx, cut, b, rot, dark) {
+  ctx.save();
+  ctx.translate(b.x + b.w / 2, b.y + b.h); ctx.rotate(rot); ctx.translate(-(b.x + b.w / 2), -(b.y + b.h));
+  ctx.shadowColor = dark ? 'rgba(0,0,0,.55)' : 'rgba(40,30,20,.2)';
+  ctx.shadowBlur = Math.max(b.w, b.h) * 0.05;
+  ctx.shadowOffsetY = Math.max(b.w, b.h) * 0.02;
+  ctx.drawImage(cut, b.x, b.y, b.w, b.h);
+  ctx.restore();
+}
+
+function drawProduct(ctx, cut, box, scene, pose, anim, t, H) {
+  const dark = scene === 'neon';
+  const floorY = box.y + box.h;
+  let b = { ...box }, lift = 0, rot = 0, alpha = 1;
+
+  if (pose === 'flutuando') lift += box.h * 0.1;
+  if (pose === 'inclinado') rot -= 0.2;
+  if (anim === 'flutuar') lift += box.h * (0.04 + 0.04 * Math.sin(t * TAU));
+  if (anim === 'balanco') rot += Math.sin(t * TAU) * 0.07;
+  if (anim === 'entrada') { const e = easeOut(t / 0.35); lift -= (1 - e) * H * 0.3; alpha = e; }
+
+  // dupla e trio: cópias menores atrás
+  const copies = [];
+  if (pose === 'duo' || pose === 'trio') {
+    const s = 0.78;
+    b = { x: box.x + box.w * (1 - s) / 2, y: floorY - box.h * s, w: box.w * s, h: box.h * s };
+    const back = { ...b, w: b.w * 0.82, h: b.h * 0.82 };
+    back.y = floorY - back.h - box.h * 0.03;
+    if (pose === 'trio') {
+      copies.push({ ...back, x: b.x - b.w * 0.42 }, { ...back, x: b.x + b.w * 0.6 });
+    } else {
+      copies.push({ ...back, x: b.x - b.w * 0.34 });
+      b.x += b.w * 0.2;
+    }
   }
 
   ctx.save();
-  ctx.shadowColor = dark ? 'rgba(0,0,0,.6)' : 'rgba(40,30,20,.22)';
-  ctx.shadowBlur = Math.max(w, h) * 0.06;
-  ctx.shadowOffsetY = Math.max(w, h) * 0.02;
-  ctx.drawImage(cut, x, y, w, h);
+  ctx.globalAlpha = alpha;
+  for (const c of copies) contactShadow(ctx, cut, { ...c, y: c.y }, c.y + c.h, 0, dark);
+  contactShadow(ctx, cut, b, floorY, Math.max(0, lift), dark);
+  const f = footprint(cut);
+  if (f.flat && !rot && pose !== 'flutuando' && anim !== 'flutuar' && anim !== 'entrada' && ['neon', 'estudio', 'por-do-sol'].includes(scene)) {
+    reflection(ctx, cut, b, floorY, dark);
+  }
+  for (const c of copies) placeCopy(ctx, cut, c, rot, dark);
+  const lifted = { ...b, y: b.y - lift };
+  placeCopy(ctx, cut, lifted, rot, dark);
+  if (anim === 'brilho' && !rot) shine(ctx, cut, lifted, t);
   ctx.restore();
 }
 
@@ -533,35 +637,65 @@ function drawText(ctx, W, H, t, tpl, info, scene, accent) {
 
 /* ---------- composição final ---------- */
 
+const sceneCache = new Map(); // o cenário não muda entre quadros da animação: desenha uma vez só
+function cachedScene(W, H, scene, accent, box) {
+  const key = [W, H, scene, accent, Math.round(box.x), Math.round(box.y), Math.round(box.w), Math.round(box.h)].join('|');
+  let c = sceneCache.get(key);
+  if (!c) {
+    c = canvasOf(W, H);
+    drawScene(c.getContext('2d'), W, H, scene, accent, box);
+    sceneCache.set(key, c);
+    if (sceneCache.size > 24) sceneCache.delete(sceneCache.keys().next().value);
+  }
+  return c;
+}
+let probe = null;
+
 /**
  * Desenha uma peça completa.
- * state: { cut, scene, template, accent, info:{name,brand,price,promo,tagline,cta}, scale }
+ * state: { cut, scene, template, accent, pose, anim, t, info:{name,brand,price,promo,tagline,cta}, scale }
+ * t (0–1) é o instante da animação; sem t, desenha o quadro "parado" representativo.
  */
 export function render(canvas, format, state) {
   const { w: W, h: H } = format;
-  canvas.width = W; canvas.height = H;
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
   const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   const scene = format.forceScene || state.scene;
   const template = format.forceTemplate || state.template;
   const accent = state.accent || '#ff5a1f';
+  const anim = format.forceScene ? 'none' : (state.anim || 'none');
+  const pose = format.forceScene ? 'padrao' : (state.pose || 'padrao');
+  const t = state.t ?? (anim === 'entrada' ? 1 : 0);
   if (!state.cut) { ctx.fillStyle = '#eceae6'; ctx.fillRect(0, 0, W, H); return canvas; }
 
-  // 1ª passada só mede a altura do texto (desenha num canvas descartável)
-  const probe = layout(W, H, state.cut, template);
+  // 1ª passada só mede a altura do texto
+  const first = layout(W, H, state.cut, template);
   let textBottom;
-  if (probe.text && !probe.wide) {
-    const m = canvasOf(W, H).getContext('2d');
-    textBottom = drawText(m, W, H, probe.text, template, state.info || {}, scene, accent);
+  if (first.text && !first.wide) {
+    if (!probe) probe = canvasOf(1, 1).getContext('2d');
+    textBottom = drawText(probe, W, H, first.text, template, state.info || {}, scene, accent);
   }
   const { box, text } = layout(W, H, state.cut, template, textBottom);
-  const s = state.scale ?? 1;
+  const s = (state.scale ?? 1) * (pose === 'inclinado' ? 0.9 : 1);
   if (s !== 1) {
     const nw = box.w * s, nh = box.h * s;
     box.x += (box.w - nw) / 2; box.y += box.h - nh; box.w = nw; box.h = nh;
   }
-  drawScene(ctx, W, H, scene, accent, box);
-  drawProduct(ctx, state.cut, box, scene);
-  drawText(ctx, W, H, text, template, state.info || {}, scene, accent);
+
+  ctx.save();
+  if (anim === 'zoom') { // aproximação lenta, centrada no produto
+    const z = 1 + 0.08 * Math.sin(t * Math.PI), cx = box.x + box.w / 2, cy = box.y + box.h * 0.6;
+    ctx.translate(cx, cy); ctx.scale(z, z); ctx.translate(-cx, -cy);
+  }
+  ctx.drawImage(cachedScene(W, H, scene, accent, box), 0, 0);
+  drawProduct(ctx, state.cut, box, scene, pose, anim, t, H);
+  ctx.restore();
+
+  ctx.save();
+  if (anim === 'entrada') ctx.globalAlpha = easeOut((t - 0.3) / 0.3);
+  if (ctx.globalAlpha > 0) drawText(ctx, W, H, text, template, state.info || {}, scene, accent);
+  ctx.restore();
   return canvas;
 }
 

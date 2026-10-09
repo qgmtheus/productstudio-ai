@@ -44,23 +44,51 @@
           <button data-mode="fast">Rápido</button>
         </div>
         <label class="range" id="tol-wrap"><span>Sensibilidade do recorte</span><input type="range" id="tol" min="12" max="70" value="34"></label>
+        <div class="refine" id="refine" hidden>
+          <label class="range"><span>Remover partes finas <em>cabos, fios, hastes</em></span><input type="range" id="r-thin" min="0" max="3" step="1" value="0"><i class="ticks"><b>Não</b><b>Leve</b><b>Médio</b><b>Forte</b></i></label>
+          <label class="range"><span>Bordas <em id="r-edge-v">originais</em></span><input type="range" id="r-edge" min="-100" max="100" step="10" value="0"></label>
+          <label class="range"><span>Girar produto <em id="r-rot-v">0°</em></span><input type="range" id="r-rot" min="-45" max="45" step="1" value="0"></label>
+          <button class="btn btn-ghost btn-sm" id="open-editor">Apagar ou restaurar à mão</button>
+        </div>
         <div class="samples"><small>ou teste com um exemplo:</small><div id="samples"></div></div>
       </section>
 
+      <section class="group" id="enh-group" hidden>
+        <h4><span>2</span>Melhorar imagem</h4>
+        <div class="row-btns">
+          <button class="btn btn-primary btn-sm" id="e-auto">Melhorar automaticamente</button>
+          <button class="btn btn-ghost btn-sm" id="e-reset">Original</button>
+        </div>
+        <label class="range"><span>Brilho <em data-v="bright">0</em></span><input type="range" data-e="bright" min="-50" max="50" value="0"></label>
+        <label class="range"><span>Contraste <em data-v="contrast">0</em></span><input type="range" data-e="contrast" min="-50" max="50" value="0"></label>
+        <label class="range"><span>Saturação <em data-v="sat">0</em></span><input type="range" data-e="sat" min="-60" max="60" value="0"></label>
+        <label class="range"><span>Temperatura <em data-v="warmth">0</em></span><input type="range" data-e="warmth" min="-40" max="40" value="0"></label>
+        <label class="range"><span>Nitidez <em data-v="sharp">0</em></span><input type="range" data-e="sharp" min="0" max="100" value="0"></label>
+      </section>
+
       <section class="group">
-        <h4><span>2</span>Cenário</h4>
+        <h4><span>3</span>Cenário</h4>
         <div class="scenes" id="scenes"></div>
       </section>
 
       <section class="group">
-        <h4><span>3</span>Peça e marca</h4>
+        <h4><span>4</span>Composição e peça</h4>
+        <small class="sub">Como o produto aparece</small>
+        <div class="chips" id="poses"></div>
+        <small class="sub">Tipo de peça</small>
         <div class="chips" id="templates"></div>
         <div class="colors" id="colors"></div>
         <label class="range"><span>Tamanho do produto</span><input type="range" id="scale" min="60" max="120" value="100"></label>
       </section>
 
       <section class="group">
-        <h4><span>4</span>Textos da peça</h4>
+        <h4><span>5</span>Animação</h4>
+        <div class="chips" id="anims"></div>
+        <small class="sub" id="anim-note">Escolha um movimento para baixar a peça em vídeo (Reels, Stories, anúncios).</small>
+      </section>
+
+      <section class="group">
+        <h4><span>6</span>Textos da peça</h4>
         <div class="fields">
           <label class="full">Nome do produto<input id="f-name" maxlength="40" placeholder="Ex.: Sérum Vitamina C"></label>
           <label>Marca<input id="f-brand" maxlength="24" placeholder="Sua marca"></label>
@@ -89,9 +117,23 @@
           <div class="preview" id="preview"><canvas id="main-canvas"></canvas></div>
           <div class="preview-bar">
             <span id="fmt-info"></span>
-            <button class="btn btn-primary btn-sm" id="dl-one">Baixar PNG</button>
+            <span class="bar-btns">
+              <button class="btn btn-ghost btn-sm" id="dl-video" hidden>Baixar vídeo</button>
+              <button class="btn btn-primary btn-sm" id="dl-one">Baixar PNG</button>
+            </span>
           </div>
         </div>
+
+        <section class="copy-box">
+          <div class="copy-head">
+            <div>
+              <h3>Variações da mesma foto</h3>
+              <p>Combinações prontas de cenário, composição e peça. Clique para usar.</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="v-more">Gerar outras</button>
+          </div>
+          <div class="variants" id="variants"></div>
+        </section>
 
         <section class="copy-box">
           <div class="copy-head">
@@ -115,6 +157,27 @@
         <div class="busy-card"><div class="spin"></div><b id="busy-t">Removendo o fundo…</b><small id="busy-s"></small><div class="bar"><i id="busy-bar"></i></div></div>
       </div>
     </main>
+  </div>
+
+  <div class="modal" id="editor" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>Ajustar recorte à mão</h3>
+        <div class="seg" id="brush-mode"><button data-b="erase" class="on">Apagar</button><button data-b="restore">Restaurar</button></div>
+        <label class="range inline"><span>Pincel</span><input type="range" id="brush-size" min="4" max="120" value="28"></label>
+        <label class="check"><input type="checkbox" id="ghost" checked> Mostrar foto original</label>
+      </div>
+      <div class="editor-stage" id="editor-stage"><canvas id="editor-canvas"></canvas><i class="cursor" id="brush-cursor"></i></div>
+      <div class="modal-foot">
+        <small>Pinte sobre o que deve sair (ou voltar). Ctrl+Z desfaz.</small>
+        <span class="bar-btns">
+          <button class="btn btn-ghost btn-sm" id="ed-undo">Desfazer</button>
+          <button class="btn btn-ghost btn-sm" id="ed-clear">Limpar edições</button>
+          <button class="btn btn-ghost btn-sm" id="ed-cancel">Cancelar</button>
+          <button class="btn btn-primary btn-sm" id="ed-apply">Aplicar</button>
+        </span>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
