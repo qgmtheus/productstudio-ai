@@ -12,7 +12,7 @@ const COLORS = ['#ff5a1f', '#131313', '#2f6f61', '#8a5cc7', '#2563eb', '#d63f6e'
 
 const state = {
   id: null, file: null, source: null, cut: null, sample: null,
-  mode: 'fast', tolerance: 34,
+  mode: 'ai', tolerance: 34,
   scene: 'estudio', template: 'lancamento', accent: COLORS[0], scale: 1,
   format: 'feed',
   info: { name: '', brand: '', tagline: '', price: '', promo: '', cta: 'Comprar agora' },
@@ -20,9 +20,9 @@ const state = {
 
 /* ---------- interface ---------- */
 
-function toast(msg) {
+function toast(msg, ms = 2400) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2400);
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms);
 }
 function busy(on, title = '', sub = '', pct = null) {
   $('busy').hidden = !on;
@@ -67,10 +67,15 @@ $('color-any').addEventListener('input', e => { state.accent = e.target.value; s
 $('scale').addEventListener('input', e => { state.scale = e.target.value / 100; sync(); });
 $('tol').addEventListener('change', e => { state.tolerance = +e.target.value; if (state.source && state.mode === 'fast') cutout(); });
 
+function setMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll('#mode button').forEach(x => x.classList.toggle('on', x.dataset.mode === mode));
+  $('tol-wrap').hidden = mode !== 'fast';
+}
+setMode(state.mode);
 document.querySelectorAll('#mode button').forEach(b => b.onclick = () => {
-  state.mode = b.dataset.mode;
-  document.querySelectorAll('#mode button').forEach(x => x.classList.toggle('on', x === b));
-  $('tol-wrap').hidden = state.mode !== 'fast';
+  if (b.dataset.mode === state.mode) return;
+  setMode(b.dataset.mode);
   if (state.source) cutout();
 });
 
@@ -78,6 +83,7 @@ const fields = { name: 'f-name', brand: 'f-brand', tagline: 'f-tagline', price: 
 for (const [k, id] of Object.entries(fields)) {
   $(id).addEventListener('input', e => {
     state.info[k] = e.target.value;
+    if (k === 'name') state.autoName = false;
     if (k === 'name') $('crumb').textContent = e.target.value || 'Novo projeto';
     sync();
   });
@@ -137,8 +143,15 @@ async function openFile(file) {
     state.source = await loadImage(url);
   } catch (e) { return toast(e.message); }
   state.file = file; state.sample = null;
+  setMode('ai'); // foto real quase nunca tem fundo liso
   state.id = 'p' + Date.now().toString(36);
-  if (!state.info.name) state.info.name = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').slice(0, 40);
+  // nome sugerido pelo arquivo, a não ser que seja nome genérico de câmera/WhatsApp ou o usuário já tenha digitado um
+  if (!state.info.name || state.autoName) {
+    const base = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+    const generic = /whatsapp|^img|^dsc|^pxl|screenshot|captura|^image|^foto|^photo|^\d|\d{4}.*\d{2}/i.test(base);
+    state.info.name = generic ? '' : base.slice(0, 40);
+    state.autoName = true;
+  }
   fillFields();
   store.track('uploads');
   await cutout();
@@ -149,8 +162,10 @@ async function useSample(id) {
   state.source = await loadImage(`img/samples/${id}.svg`);
   state.file = null; state.sample = id;
   state.id = 'p' + Date.now().toString(36);
+  state.autoName = true;
   Object.assign(state.info, { name: s.name, brand: s.brand, tagline: s.tagline, price: String(s.price), promo: String(s.promo) });
   state.accent = s.accent;
+  setMode('fast'); // amostras têm fundo liso: o modo rápido basta
   $('c-cat').value = s.cat; $('c-feats').value = s.feats; $('c-aud').value = s.aud;
   fillFields();
   store.track('uploads');
@@ -168,22 +183,25 @@ async function sourceBlob() {
 
 async function cutout() {
   const t0 = performance.now();
+  let note = '';
   try {
     if (state.mode === 'ai') {
-      busy(true, 'Removendo o fundo com IA…', 'Na primeira vez o modelo (~40 MB) é baixado e fica salvo no navegador.', 0);
-      state.cut = await removeBackgroundAI(await sourceBlob(), p => p !== null && busy(true, 'Baixando o modelo de IA…', 'Só na primeira vez. Depois fica salvo no navegador.', p));
+      busy(true, 'Removendo o fundo com IA…', 'Na primeira vez o modelo (~80 MB) é baixado e fica salvo no navegador.', 0);
+      state.cut = await removeBackgroundAI(await sourceBlob(), (phase, p) => {
+        if (phase === 'fetch') busy(true, 'Baixando o modelo de IA…', 'Só na primeira vez. Depois fica salvo no navegador.', p);
+        else busy(true, 'Recortando o produto com IA…', 'Leva alguns segundos.', null);
+      });
     } else {
       busy(true, 'Removendo o fundo…');
       await new Promise(r => setTimeout(r, 30)); // deixa o overlay aparecer
       state.cut = removeBackgroundFast(state.source, { tolerance: state.tolerance });
+      if (state.cut.lowConfidence) note = 'O fundo da foto não é liso — use “Precisão (IA)” para um recorte melhor.';
     }
   } catch (e) {
-    console.error(e);
-    toast('A IA não carregou aqui — usando o modo rápido.');
-    state.mode = 'fast';
-    document.querySelectorAll('#mode button').forEach(x => x.classList.toggle('on', x.dataset.mode === 'fast'));
-    $('tol-wrap').hidden = false;
+    console.error('Falha na remoção de fundo por IA:', e);
+    setMode('fast');
     state.cut = removeBackgroundFast(state.source, { tolerance: state.tolerance });
+    note = 'Não foi possível rodar a IA neste navegador. Usamos o modo rápido — funciona melhor com fundo liso.';
   } finally { busy(false); }
 
   const cc = $('cut-canvas');
@@ -193,7 +211,7 @@ async function cutout() {
   $('empty').hidden = true; $('work').hidden = false;
   $('dl-all').disabled = false;
   const ms = Math.round(performance.now() - t0);
-  toast(`Fundo removido em ${(ms / 1000).toFixed(1).replace('.', ',')}s`);
+  toast(note || `Fundo removido em ${(ms / 1000).toFixed(1).replace('.', ',')}s`, note ? 6000 : 2400);
   sync();
 }
 

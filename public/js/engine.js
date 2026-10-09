@@ -141,23 +141,55 @@ export function removeBackgroundFast(img, { tolerance = 34 } = {}) {
     d[(y * w + x) * 4 + 3] = Math.round(255 * (1 - s / n));
   }
   ctx.putImageData(id, 0, 0);
-  return trim(c);
+  let removed = 0;
+  for (let p = 0; p < w * h; p++) removed += mask[p];
+  const out = trim(c);
+  out.lowConfidence = removed < w * h * 0.12; // quase nada saiu: o fundo não é liso
+  return out;
 }
 
 let aiModule = null;
 /**
  * Modo precisão: rede neural rodando no próprio navegador (@imgly/background-removal).
- * Baixa o modelo na primeira vez (~40 MB) e depois fica em cache.
+ * Baixa o modelo na primeira vez (~80 MB) e depois fica em cache.
  */
 export async function removeBackgroundAI(file, onProgress) {
   if (!aiModule) aiModule = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
   const blob = await aiModule.removeBackground(file, {
-    model: 'isnet_quint8',
+    model: 'isnet_fp16',
     output: { format: 'image/png' },
-    progress: (key, cur, total) => onProgress?.(key.startsWith('fetch') ? cur / total : null),
+    // a biblioteca valida que o callback não retorna nada — por isso o corpo em bloco
+    progress: (key, cur, total) => { onProgress?.(key.startsWith('fetch') ? 'fetch' : 'compute', total ? cur / total : 0); },
   });
   const img = await loadImage(URL.createObjectURL(blob));
-  return trim(toCanvas(img, 1400));
+  return trim(dropIslands(toCanvas(img, 1400)));
+}
+
+/** Apaga manchas soltas (pedaços de fundo que sobraram longe do produto). */
+function dropIslands(c) {
+  const { width: w, height: h } = c, ctx = c.getContext('2d');
+  const id = ctx.getImageData(0, 0, w, h), d = id.data;
+  const label = new Int32Array(w * h), sizes = [0];
+  for (let p0 = 0; p0 < w * h; p0++) {
+    if (label[p0] || d[p0 * 4 + 3] < 128) continue;
+    const n = sizes.length, stack = [p0];
+    label[p0] = n; let size = 0;
+    while (stack.length) {
+      const p = stack.pop(), x = p % w; size++;
+      for (const q of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p - w, p + w]) {
+        if (q < 0 || q >= w * h || label[q] || d[q * 4 + 3] < 128) continue;
+        label[q] = n; stack.push(q);
+      }
+    }
+    sizes.push(size);
+  }
+  const keep = Math.max(...sizes) * 0.04;
+  for (let p = 0; p < w * h; p++) {
+    const l = label[p];
+    if (l ? sizes[l] < keep : d[p * 4 + 3] < 40) d[p * 4 + 3] = 0;
+  }
+  ctx.putImageData(id, 0, 0);
+  return c;
 }
 
 /* ---------- cenários ---------- */

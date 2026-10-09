@@ -10,7 +10,7 @@ cenários, banners, peças promocionais em vários formatos e descrições de ve
 **Estúdio** (`/studio`)
 - Envio por clique, arrastar e soltar ou colar (Ctrl+V); três produtos de exemplo
 - Remoção de fundo em dois modos: **rápido** (algoritmo próprio, instantâneo, remove até o fundo dentro de alças)
-  e **precisão (IA)** — rede neural rodando no navegador (`@imgly/background-removal`, ~40 MB baixados só na 1ª vez)
+  e **precisão (IA)** — rede neural rodando no navegador (`@imgly/background-removal`, ~80 MB baixados só na 1ª vez; é o modo padrão para fotos enviadas)
 - 8 cenários gerados na hora (estúdio, pódio, mármore, madeira, pôr do sol, natureza, neon, fundo branco),
   com sombra de contato e reflexo
 - 5 peças (só a foto, lançamento, promoção com selo de desconto, frete grátis, minimalista) com a cor da marca
