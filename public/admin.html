@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel · ProductStudio AI</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%23131313'/><circle cx='16' cy='16' r='6' fill='%23ff5a1f'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .admin { padding: 36px 0 80px; }
+    .admin-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
+    .admin-head h1 { font-size: clamp(32px, 4vw, 44px); margin: 6px 0 4px; }
+    .admin-head p { color: var(--muted); }
+    .demo-note { font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 22px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .kpi { background: var(--surface); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+    .kpi span { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .kpi b { display: block; font-size: 34px; letter-spacing: -.03em; margin-top: 4px; }
+    .kpi small { font-size: 12px; color: var(--ok); font-weight: 600; }
+    .row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-top: 14px; }
+    .card { background: var(--surface); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); min-width: 0; }
+    .card h3 { font-size: 16px; margin-bottom: 4px; }
+    .card .sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .chart { display: flex; align-items: end; gap: 6px; height: 180px; }
+    .chart .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 100%; position: relative; }
+    .chart .col i { display: block; border-radius: 4px 4px 0 0; min-height: 2px; }
+    .chart .col i.u { background: var(--ink); }
+    .chart .col i.d { background: var(--accent); border-radius: 0; }
+    .chart .col em { position: absolute; bottom: -20px; left: 50%; translate: -50%; font-size: 10px; font-style: normal; color: var(--muted); }
+    .chart .col.today i.u { box-shadow: 0 0 0 2px var(--accent); }
+    .legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 30px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+    .bars { display: grid; gap: 10px; }
+    .bars div { display: grid; grid-template-columns: 110px 1fr 36px; gap: 10px; align-items: center; font-size: 13px; }
+    .bars u { text-decoration: none; height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+    .bars u i { display: block; height: 100%; background: var(--ink); border-radius: 6px; }
+    .bars div:first-child u i { background: var(--accent); }
+    .bars b { text-align: right; font-weight: 600; }
+    .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 14px; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+    .proj { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); position: relative; }
+    .proj img { aspect-ratio: 1; object-fit: cover; width: 100%; background: #fff; }
+    .proj .meta { padding: 10px 12px; }
+    .proj .meta b { font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .proj .meta small { font-size: 12px; color: var(--muted); }
+    .proj .pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .proj .pills span { font-size: 10px; font-weight: 600; background: var(--surface); border: 1px solid var(--line); padding: 2px 7px; border-radius: 99px; }
+    .proj .del { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.92); font-size: 14px; opacity: 0; transition: opacity .2s; }
+    .proj:hover .del { opacity: 1; }
+    .proj .ex { position: absolute; top: 8px; left: 8px; font-size: 10px; font-weight: 700; background: rgba(0,0,0,.6); color: #fff; padding: 3px 8px; border-radius: 99px; }
+    .empty-g { color: var(--muted); font-size: 14px; padding: 20px 0; }
+    @media (max-width: 900px) {
+      .kpis { grid-template-columns: 1fr 1fr; }
+      .row, .three { grid-template-columns: 1fr; }
+      .proj .del { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header class="nav scrolled">
+    <div class="wrap">
+      <a href="/" class="logo"><span class="logo-mark"><i></i></span>ProductStudio <small>AI</small></a>
+      <span class="spacer"></span>
+      <div class="actions">
+        <button class="btn btn-ghost btn-sm" id="reset">Restaurar exemplo</button>
+        <a href="/studio" class="btn btn-primary btn-sm">Abrir estúdio</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin wrap">
+    <div class="admin-head">
+      <div>
+        <h1>Painel <em class="serif">da loja</em></h1>
+        <p>Produtos criados, peças baixadas e o que mais funciona.</p>
+      </div>
+    </div>
+    <p class="demo-note">Demonstração: os números começam com dados de exemplo e tudo o que você fizer no estúdio (enviar fotos, baixar peças, copiar textos) aparece aqui na hora. Os dados ficam só no seu navegador.</p>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="row">
+      <div class="card">
+        <h3>Atividade dos últimos 14 dias</h3>
+        <p class="sub">Fotos enviadas e peças baixadas por dia</p>
+        <div class="chart" id="chart"></div>
+        <div class="legend"><span><i style="background:var(--ink)"></i>Fotos enviadas</span><span><i style="background:var(--accent)"></i>Peças baixadas</span></div>
+      </div>
+      <div class="card">
+        <h3>Formatos mais baixados</h3>
+        <p class="sub">Onde os seus produtos estão sendo usados</p>
+        <div class="bars" id="b-formats"></div>
+      </div>
+    </div>
+
+    <div class="three">
+      <div class="card"><h3>Cenários favoritos</h3><p class="sub">Escolhas no estúdio</p><div class="bars" id="b-scenes"></div></div>
+      <div class="card"><h3>Tipos de peça</h3><p class="sub">Escolhas no estúdio</p><div class="bars" id="b-templates"></div></div>
+      <div class="card"><h3>Dica da semana</h3><p class="sub">Com base no seu uso</p><p id="tip" style="font-size:15px"></p></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3>Produtos recentes</h3>
+      <p class="sub">Clique para continuar editando no estúdio</p>
+      <div class="gallery" id="gallery"></div>
+    </div>
+  </main>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

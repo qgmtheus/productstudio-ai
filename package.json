@@ -1,0 +1,9 @@
+{
+  "name": "productstudio-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Estúdio de imagens de produtos: remove fundo, aplica cenários e gera peças e descrições",
+  "scripts": {
+    "dev": "npx --yes serve public -l 3001"
+  }
+}

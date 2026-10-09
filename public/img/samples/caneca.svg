@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3f2ef"/><stop offset="1" stop-color="#dedcd7"/></linearGradient>
+<linearGradient id="body" x1="0" x2="1"><stop offset="0" stop-color="#1f4f45"/><stop offset=".3" stop-color="#3f8a78"/><stop offset=".55" stop-color="#2f6f61"/><stop offset="1" stop-color="#173a33"/></linearGradient>
+</defs>
+<rect width="900" height="900" fill="url(#bg)"/>
+<ellipse cx="430" cy="712" rx="220" ry="22" fill="#000" opacity=".1"/>
+<path d="M590 380 q120 0 120 110 q0 110 -130 120" fill="none" stroke="#2a6457" stroke-width="44" stroke-linecap="round"/>
+<path d="M250 300 h360 v330 q0 80 -80 80 h-200 q-80 0 -80 -80z" fill="url(#body)"/>
+<ellipse cx="430" cy="300" rx="180" ry="26" fill="#2c6a5d"/>
+<ellipse cx="430" cy="302" rx="160" ry="18" fill="#3b2418"/>
+<rect x="282" y="330" width="28" height="300" rx="14" fill="#fff" opacity=".18"/>
+<text x="430" y="500" font-family="Georgia,serif" font-size="46" text-anchor="middle" fill="#e9e2cf" font-style="italic">bom dia</text>
+</svg>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ProductStudio AI · Fotos de produto que vendem</title>
+  <meta name="description" content="Envie uma foto simples do seu produto e receba imagens publicitárias, fundo removido, cenários, banners e descrições prontas em todos os formatos.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%23131313'/><circle cx='16' cy='16' r='6' fill='%23ff5a1f'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a href="/" class="logo"><span class="logo-mark"><i></i></span>ProductStudio <small>AI</small></a>
+      <nav class="nav-links">
+        <a href="#como">Como funciona</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#cenarios">Cenários</a>
+        <a href="#planos">Planos</a>
+      </nav>
+      <span class="spacer"></span>
+      <div class="actions">
+        <a href="/admin" class="btn btn-ghost btn-sm">Painel</a>
+        <a href="/studio" class="btn btn-primary btn-sm">Abrir estúdio</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow"><b>Novo</b> Peças para Instagram, marketplace e site em segundos</span>
+        <h1>Uma foto simples.<br><em class="serif">Uma campanha</em> inteira.</h1>
+        <p class="lead">Envie a foto do seu produto tirada no celular. O estúdio remove o fundo, coloca em um cenário profissional e entrega banners, posts e descrições prontos para vender.</p>
+        <div class="hero-cta">
+          <a href="/studio" class="btn btn-accent">Criar minhas imagens grátis →</a>
+          <a href="#como" class="btn btn-ghost">Ver como funciona</a>
+        </div>
+        <div class="hero-proof">
+          <div><b>8</b>cenários</div>
+          <div><b>6</b>formatos</div>
+          <div><b>~10s</b>por campanha</div>
+        </div>
+      </div>
+      <div>
+        <div class="compare" id="compare" style="--pos:50%">
+          <img id="cmp-before" alt="Foto original do produto" src="img/samples/serum.svg">
+          <canvas class="after" id="cmp-after" width="1080" height="1080"></canvas>
+          <span class="handle"></span>
+          <span class="tag l">Foto original</span>
+          <span class="tag r">Com ProductStudio</span>
+        </div>
+        <div class="sample-pick" id="sample-pick"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="strip">
+    <div class="wrap">
+      <div class="strip-row" id="strip"></div>
+    </div>
+  </section>
+
+  <section class="block" id="como">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="k">Como funciona</span>
+        <h2>Do celular para o anúncio <em class="serif">em três passos</em></h2>
+        <p>Sem fotógrafo, sem estúdio, sem programa de edição.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><div class="n">1</div><h3>Envie a foto</h3><p>Qualquer foto do produto, de preferência em um fundo liso. Pode ser do celular.</p></div>
+        <div class="step reveal"><div class="n">2</div><h3>Escolha o estilo</h3><p>Fundo removido automaticamente. Você escolhe o cenário, a cor da marca e o tipo de peça.</p></div>
+        <div class="step reveal"><div class="n">3</div><h3>Baixe tudo</h3><p>Post, story, anúncio, banner e foto de marketplace — mais a descrição pronta para colar.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="recursos" style="padding-top:20px">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="k">Recursos</span>
+        <h2>Tudo o que a loja precisa <em class="serif">para vender</em></h2>
+      </div>
+      <div class="features reveal">
+        <div class="feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20 20 4M7 4h-3v3M20 17v3h-3M4 12v-2M12 4h-2M20 12v2M12 20h2"/></svg></div><h3>Remoção de fundo</h3><p>Recorte automático, com modo de alta precisão por rede neural rodando no navegador.</p></div>
+        <div class="feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="16" cy="8" r="1.5"/></svg></div><h3>Cenários profissionais</h3><p>Estúdio, pódio, mármore, madeira, natureza, neon e mais — com sombra e reflexo realistas.</p></div>
+        <div class="feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h10M4 17h6"/><circle cx="18" cy="16" r="3"/></svg></div><h3>Peças promocionais</h3><p>Lançamento, promoção com selo de desconto, frete grátis e minimalista, com a cor da sua marca.</p></div>
+        <div class="feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="8" height="8" rx="1.5"/><rect x="14" y="3" width="7" height="12" rx="1.5"/><rect x="3" y="16" width="18" height="5" rx="1.5"/></svg></div><h3>Todos os formatos</h3><p>Post, feed retrato, story, anúncio, banner de site e foto de marketplace no fundo branco.</p></div>
+        <div class="feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></div><h3>Descrições que vendem</h3><p>Título SEO, descrição curta e completa, tópicos, legenda e hashtags no tom da sua marca.</p></div>
+        <div class="feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div><h3>Download em lote</h3><p>Baixe cada peça em PNG ou o kit completo em um arquivo .zip, pronto para postar.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="cenarios" style="padding-top:20px">
+    <div class="wrap">
+      <div class="dark-block reveal">
+        <div class="sec-head">
+          <span class="k">Cenários</span>
+          <h2>A mesma foto, <em class="serif">oito ambientes</em></h2>
+          <p>Gerados na hora a partir da foto original. Clique em um cenário para abri-lo no estúdio.</p>
+        </div>
+        <div class="scene-grid" id="scene-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="planos">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="k">Planos</span>
+        <h2>Comece grátis, <em class="serif">cresça</em> quando quiser</h2>
+      </div>
+      <div class="plans reveal">
+        <div class="plan">
+          <div class="name">Grátis</div>
+          <div class="price">R$ 0<small>/mês</small></div>
+          <div class="desc">Para testar com seus primeiros produtos.</div>
+          <ul><li>10 produtos por mês</li><li>Todos os cenários</li><li>Post e story</li><li>Descrições automáticas</li></ul>
+          <a href="/studio" class="btn btn-ghost">Começar</a>
+        </div>
+        <div class="plan pop">
+          <div class="name">Loja <span>Mais escolhido</span></div>
+          <div class="price">R$ 49<small>/mês</small></div>
+          <div class="desc">Para lojas que postam toda semana.</div>
+          <ul><li>Produtos ilimitados</li><li>Todos os 6 formatos</li><li>Remoção de fundo de alta precisão</li><li>Kit completo em .zip</li><li>Cor e nome da sua marca</li></ul>
+          <a href="/studio" class="btn btn-ghost">Testar 7 dias grátis</a>
+        </div>
+        <div class="plan">
+          <div class="name">Agência</div>
+          <div class="price">R$ 149<small>/mês</small></div>
+          <div class="desc">Para quem atende vários clientes.</div>
+          <ul><li>Tudo do plano Loja</li><li>Até 10 marcas</li><li>Painel com histórico e métricas</li><li>Suporte prioritário</li></ul>
+          <a href="/admin" class="btn btn-ghost">Ver o painel</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-final">
+    <div class="wrap">
+      <h2>Sua próxima campanha está <em class="serif">a uma foto</em> de distância.</h2>
+      <a href="/studio" class="btn btn-accent">Abrir o estúdio →</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>© 2026 ProductStudio AI · projeto de demonstração</span>
+      <span><a href="/studio">Estúdio</a> · <a href="/admin">Painel</a></span>
+    </div>
+  </footer>
+
+  <script type="module" src="js/home.js"></script>
+</body>
+</html>
